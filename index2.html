@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+		<meta name="description" content="" />
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	</head>
+	<body>
+	</body>
+	<script>
+		var dataStorage = [];
+		var dataWithGeolocation = [];
+		var baseUrl = 'http://gm.gnavi.co.jp/restaurant/list/tokyo/all_area/all_small_area/all_food/all_star/p::PAGE::/';
+		var baseUrl2 = 'http://gm.gnavi.co.jp';
+		var addToGeoUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=::ADDR::&key=API_KEY_HERE';
+		var page = 1;
+		var id = 0;
+		
+		
+		function getGeolocation(arrayId) {
+			var addr = dataStorage[arrayId].address.replace(/ /g, '+');
+			var url = addToGeoUrl.replace('::ADDR::', addr);
+			
+			var xhRequest = new XMLHttpRequest();
+			xhRequest.open('GET', url, true);
+			xhRequest.responseType = 'json';
+			xhRequest.onload = function(eventObj) {
+				if (this.response.results.length > 0) {
+					var geolocation = this.response.results[0].geometry.location;
+					dataStorage[arrayId].lat = geolocation.lat;
+					dataStorage[arrayId].lng = geolocation.lng;
+					
+					dataWithGeolocation.push(dataStorage[arrayId]);
+				}
+			};
+			xhRequest.onerror = function(eventObj) {
+				console.log('error');
+			};
+			
+			xhRequest.send();
+		}
+		
+		function loadDetailAndPopulate(arrayId) {
+			var url = baseUrl2 + dataStorage[arrayId].detail_url;
+			
+			var xhRequest = new XMLHttpRequest();
+			xhRequest.open('GET', url, true);
+			xhRequest.responseType = 'document';
+			xhRequest.onload = function(eventObj) {
+				var resp = this.response;
+				var _this = $(resp);
+				var kanjiName = _this.find('h2 span').html();
+				var address = _this.find('dl.address dd').html();
+				var tel = _this.find('dl.tel dd span').html();
+				
+				dataStorage[arrayId].kanjiName = kanjiName;
+				dataStorage[arrayId].address = address;
+				dataStorage[arrayId].tel = tel;
+				
+				getGeolocation(arrayId);
+				console.log('populating ' + arrayId);
+				if (++id < dataStorage.length) {
+					loadDetailAndPopulate(id);
+				} else {
+					console.log('complete2');
+				}
+			};
+			xhRequest.onerror = function(eventObj) {
+				console.log('error');
+			};
+			
+			xhRequest.send();
+		}
+		
+		function loadFromXHR(resourceUrl) {
+			var xhRequest = new XMLHttpRequest();
+			xhRequest.open('GET', resourceUrl, true);
+			xhRequest.responseType = 'document';
+			xhRequest.onload = function(eventObj) {
+				var resp = this.response;
+				var restaurentList = $(resp).find('ul#restaurantList');
+				restaurentList.children('li.clfix').each(function() {
+					var _this = $(this);
+					var name = _this.find('dt a').html();
+					var detail_url = _this.find('dt a').attr('href');
+					
+					var cuisine = _this.find('dd li.cuisine').html();
+					var area = _this.find('dd li.area').html();
+					
+					dataStorage.push({
+						name: name,
+						detail_url: detail_url,
+						cuisine: cuisine,
+						area: area
+					});
+					console.log(dataStorage.length);
+				});
+				
+				if (++page < 56) {
+					var url = baseUrl.replace('::PAGE::', page);
+					loadFromXHR(url);
+				} else {
+					console.log('complete');
+					console.log(dataStorage);
+					loadDetailAndPopulate(id);
+				}
+				
+			};
+			xhRequest.onerror = function(eventObj) {
+				console.log('error');
+			};
+			
+			xhRequest.send();
+		}
+		
+		loadFromXHR('http://gm.gnavi.co.jp/restaurant/list/tokyo/all_area/all_small_area/all_food/all_star/p1/');
+		
+		/*
+		for (var i = 1; i < 56; i++) {
+			var url = 'http://gm.gnavi.co.jp/restaurant/list/tokyo/all_area/all_small_area/all_food/all_star/p' + i + '/';
+			loadFromXHR(url);
+		}
+		//*/
+		
+	</script>
+</html>
+
+
+<!-- http://gm.gnavi.co.jp/restaurant/list/tokyo/all_area/all_small_area/all_food/all_star/p55/ -->
