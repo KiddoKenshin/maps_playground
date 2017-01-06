@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+		<meta name="description" content="" />
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<style>
+			*{padding:0;margin:0;}::-webkit-scrollbar{display: none;}html, body{width:100%;height:100%;}body{position:relative;background-color:#000000;}div#map {height: 100%;}
+		</style>
+	</head>
+	<body>
+		<div id="map"></div>
+	</body>
+	<script>
+		var rect;
+		var latlng1, latlng2;
+		var pos1, pos2;
+		var selecting = false;
+		
+		function showSelect() {
+			var latLngBounds = new google.maps.LatLngBounds(latlng1, latlng2);
+        	rect.setBounds(latLngBounds);
+		}
+		
+		function initMap() {
+			// Create a map object and specify the DOM element for display.
+			var mapVar = new google.maps.Map(document.getElementById('map'), {
+				center: {lat: 35.6895, lng: 139.6917},
+				scrollwheel: true,
+				zoom: 11,
+				minZoom: 11,
+				maxZoom: 18,
+				draggable: false
+			});
+			
+			rect = new google.maps.Rectangle({
+				map: mapVar,
+				strokeWeight: 1,
+				fillColor: '#FF0000'
+			});
+			
+			
+			google.maps.event.addListener(mapVar, 'mouseup', function(mEvent) {
+				selecting = false;
+				latlng2 = mEvent.latLng;
+				pos2 = mEvent.pixel;
+				showSelect();
+				console.log(latlng2);
+			});
+			
+			google.maps.event.addListener(rect, 'mouseup', function(mEvent) { // fail safe
+				selecting = false;
+				latlng2 = mEvent.latLng;
+				pos2 = mEvent.pixel;
+				showSelect();
+				console.log(latlng2);
+			});
+			
+			google.maps.event.addListener(mapVar, 'mousedown', function(mEvent) {
+				selecting = true;
+				latlng1 = mEvent.latLng;
+				pos1 = mEvent.pixel;
+				
+				console.log('ms down');
+			});
+			
+			google.maps.event.addListener(mapVar, 'mousemove', function(mEvent) {
+				latlng2 = mEvent.latLng;
+				pos2 = mEvent.pixel;
+				if (selecting) showSelect();
+				
+				console.log('ms move');
+			});
+			
+			google.maps.event.addListener(mapVar, 'dragend', function(mEvent) {
+				console.log(123);
+			});
+		}
+	</script>
+	<script src="https://maps.googleapis.com/maps/api/js?key=API_KEY_HERE&callback=initMap" async defer></script>
+	 
+</html>
