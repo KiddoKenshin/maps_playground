@@ -4,6 +4,7 @@
 		<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
 		<meta name="description" content="" />
 		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<script type="text/javascript" src="sql.js"></script><!-- https://github.com/kripken/sql.js/ -->
 		<style>
 			*{padding:0;margin:0;}::-webkit-scrollbar{display: none;}html, body{width:100%;height:100%;}body{position:relative;background-color:#000000;}div#map {height: 100%;}
 		</style>
@@ -12,10 +13,73 @@
 		<div id="map"></div>
 	</body>
 	<script>
+		var db = new window.SQL.Database();
+		
+		var mapVar;
 		var rect;
+		var markers = []; // Maybe Object might be better?
+		var activeWindows = []; // Maybe Object might be better?
 		var latlng1, latlng2;
 		var pos1, pos2;
 		var selecting = false;
+		
+		function closeActiveWindows() {
+			for (var i = 0; i < activeWindows.length; i++) {
+				activeWindows[i].close();
+			}
+			activeWindows = [];
+		}
+		
+		function createMarkers(data) {
+			var geolocation = {lat: data.geolat, lng: data.geolng};
+			
+			var html = '<div id="content"><h2>' + data.name + '</h2><div id="bodyContent">Cuisine: ' + data.cuisine + '<br />Area: ' + data.area + '<br />Address: ' + data.address + '<br /><br />Tel: ' + data.tel + '<br /><a href="http://gm.gnavi.co.jp' + data.gnavi_url + '" target="_blank">Website</a></div></div>';
+			var infoWindow = new google.maps.InfoWindow({
+				content: html
+			});
+			
+			var marker = new google.maps.Marker({
+				position: geolocation,
+				map: mapVar,
+				title: data.name
+			});
+			marker.addListener('click', function() {
+				closeActiveWindows();
+				infoWindow.open(mapVar, marker);
+				activeWindows.push(infoWindow);
+			});
+			
+			markers.push(marker);
+			// infoWindows.push(infoWindow);
+		}
+		
+		function placeMarkersToMap() {
+			var res = db.exec('SELECT * FROM restaurants');
+			var cols = res[0].columns;
+			var vals = res[0].values;
+			
+			for (var i = 0; i < vals.length; i++) {
+				var data = {};
+				for (var j = 0; j < vals[i].length; j++) {
+					data[cols[j]] = vals[i][j];
+				}
+				console.log(data);
+				createMarkers(data);
+			}
+		}
+		
+		function initDB() {
+			var statement = 'DROP TABLE IF EXISTS restaurants;'; 
+			statement += 'CREATE TABLE restaurants(id integer, name text, kanji_name text, area text, address text, cuisine text, geolat float, geolng float, tel text, gnavi_url text);';
+			db.run(statement);
+			
+			// TODO: Get Data from External DB
+			// * Assuming that data are all taken from External DB
+			var insertStatement = "INSERT INTO restaurants VALUES (1,'Aoba','青葉','Nakano-ku','5-58-1 Nakano, Nakano-ku, Tokyo','Ramen',35.7080013,139.666438,'03-3388-5552','/shop/0117010601/');INSERT INTO restaurants VALUES (2,'Waketokuyama','分とく山','Minato-ku','5-1-5 Minamiazabu, Minato-ku, Tokyo','Japanese',35.6556203,139.7231963,'03-5789-3838','/shop/0117038902/');";
+			db.run(insertStatement);
+			
+			placeMarkersToMap();
+		}
 		
 		function showSelect() {
 			var latLngBounds = new google.maps.LatLngBounds(latlng1, latlng2);
@@ -24,7 +88,7 @@
 		
 		function initMap() {
 			// Create a map object and specify the DOM element for display.
-			var mapVar = new google.maps.Map(document.getElementById('map'), {
+			mapVar = new google.maps.Map(document.getElementById('map'), {
 				center: {lat: 35.6895, lng: 139.6917},
 				scrollwheel: true,
 				zoom: 11,
@@ -62,6 +126,8 @@
 				pos1 = mEvent.pixel;
 				
 				console.log('ms down');
+				// Close active info windows
+				closeActiveWindows();
 			});
 			
 			google.maps.event.addListener(mapVar, 'mousemove', function(mEvent) {
@@ -69,12 +135,14 @@
 				pos2 = mEvent.pixel;
 				if (selecting) showSelect();
 				
-				console.log('ms move');
+				// console.log('ms move');
 			});
 			
 			google.maps.event.addListener(mapVar, 'dragend', function(mEvent) {
 				console.log(123);
 			});
+			
+			initDB();
 		}
 	</script>
 	<script src="https://maps.googleapis.com/maps/api/js?key=API_KEY_HERE&callback=initMap" async defer></script>
