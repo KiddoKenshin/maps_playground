@@ -16,7 +16,7 @@
 		var db = new window.SQL.Database();
 		
 		var mapVar;
-		var rect;
+		var rect, circ;
 		var markers = []; // Maybe Object might be better?
 		var activeWindows = []; // Maybe Object might be better?
 		var latlng1, latlng2;
@@ -83,7 +83,11 @@
 		
 		function showSelect() {
 			var latLngBounds = new google.maps.LatLngBounds(latlng1, latlng2);
-        	rect.setBounds(latLngBounds);
+			var distance = Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
+			
+        	// rect.setBounds(latLngBounds);
+        	console.log(distance);
+        	circ.setRadius(distance * 63); // Check Map scale
 		}
 		
 		function initMap() {
@@ -101,6 +105,15 @@
 				map: mapVar,
 				strokeWeight: 1,
 				fillColor: '#FF0000'
+			});
+			
+			circ = new google.maps.Circle({
+				map: mapVar,
+				strokeWeight: 1,
+				fillColor: '#FF0000',
+				// radius: 10000,
+				// position: {lat: 35.6895, lng: 139.6917},
+				center: {lat: 35.6895, lng: 139.6917}
 			});
 			
 			
@@ -124,6 +137,9 @@
 				selecting = true;
 				latlng1 = mEvent.latLng;
 				pos1 = mEvent.pixel;
+				circ.setCenter(mEvent.latLng);
+				circ.setRadius(0);
+				// circ.setPosition = mEvent.latLng;
 				
 				console.log('ms down');
 				// Close active info windows
