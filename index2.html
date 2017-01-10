@@ -16,6 +16,14 @@
 		var page = 1;
 		var id = 0;
 		
+		function createSQLStatement() {
+			var body = $('body');
+			for (var i = 0; i < dataWithGeolocation.length; i++) {
+				var data = dataWithGeolocation[i];
+				var text = "INSERT INTO restaurants VALUES (" + (i + 1) + ",'" + data.name.replace("'", " ") + "','" + data.kanjiName + "','" + data.area + "','" + data.address + "','" + data.cuisine + "'," + data.lat + "," + data.lng + ",'" + data.tel + "','" + data.detail_url + "');";
+				body.append(text);
+			}
+		}
 		
 		function getGeolocation(arrayId) {
 			var addr = dataStorage[arrayId].address.replace(/ /g, '+');
