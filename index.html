@@ -16,12 +16,19 @@
 		var db = new window.SQL.Database();
 		
 		var mapVar;
+		var latlngDist;
 		var rect, circ;
 		var markers = []; // Maybe Object might be better?
 		var activeWindows = []; // Maybe Object might be better?
 		var latlng1, latlng2;
 		var pos1, pos2;
 		var selecting = false;
+		
+		function filterRadius() {
+			// Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
+			var res = db.exec('SELECT * FROM restaurants WHERE SQRT(POWER(geolat - ' + latlng1.lat() + ', 2) + POWER(geolng - ' + latlng1.lng() + ', 2)) <= ' + latlngDist + ';');
+			console.log(res);
+		}
 		
 		function closeActiveWindows() {
 			for (var i = 0; i < activeWindows.length; i++) {
@@ -84,9 +91,7 @@
 		function showSelect() {
 			var latLngBounds = new google.maps.LatLngBounds(latlng1, latlng2);
 			var distance = Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
-			
-        	// rect.setBounds(latLngBounds);
-        	console.log(distance);
+			latlngDist = Math.sqrt(Math.pow(latlng2.lat() - latlng1.lat(), 2) + Math.pow(latlng2.lng() - latlng1.lng(), 2));
         	circ.setRadius(distance * 63); // Check Map scale
 		}
 		
@@ -109,11 +114,8 @@
 			
 			circ = new google.maps.Circle({
 				map: mapVar,
-				strokeWeight: 1,
-				fillColor: '#FF0000',
-				// radius: 10000,
-				// position: {lat: 35.6895, lng: 139.6917},
-				center: {lat: 35.6895, lng: 139.6917}
+				strokeWeight: 0,
+				fillColor: '#FF0000'
 			});
 			
 			
@@ -122,7 +124,8 @@
 				latlng2 = mEvent.latLng;
 				pos2 = mEvent.pixel;
 				showSelect();
-				console.log(latlng2);
+				
+				filterRadius();
 			});
 			
 			google.maps.event.addListener(rect, 'mouseup', function(mEvent) { // fail safe
@@ -130,7 +133,17 @@
 				latlng2 = mEvent.latLng;
 				pos2 = mEvent.pixel;
 				showSelect();
-				console.log(latlng2);
+				
+				filterRadius();
+			});
+			
+			google.maps.event.addListener(circ, 'mouseup', function(mEvent) { // fail safe
+				selecting = false;
+				latlng2 = mEvent.latLng;
+				pos2 = mEvent.pixel;
+				showSelect();
+				
+				filterRadius();
 			});
 			
 			google.maps.event.addListener(mapVar, 'mousedown', function(mEvent) {
@@ -139,9 +152,7 @@
 				pos1 = mEvent.pixel;
 				circ.setCenter(mEvent.latLng);
 				circ.setRadius(0);
-				// circ.setPosition = mEvent.latLng;
 				
-				console.log('ms down');
 				// Close active info windows
 				closeActiveWindows();
 			});
@@ -150,8 +161,6 @@
 				latlng2 = mEvent.latLng;
 				pos2 = mEvent.pixel;
 				if (selecting) showSelect();
-				
-				// console.log('ms move');
 			});
 			
 			google.maps.event.addListener(mapVar, 'dragend', function(mEvent) {
