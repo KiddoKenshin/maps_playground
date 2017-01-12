@@ -17,6 +17,9 @@
 				<option value="">All</option>
 			</select>
 		</div>
+		<div id="clearfilter" style="display: none; position: absolute; left: 344px; top: 10px; width: 70px; height: 32px; background-color: #FFFFFF; border: 1px solid #DDDDDD; font-size: 62.5%; line-height: 32px; padding-left: 8px; cursor: default;">
+			Clear Radius
+		</div>
 	</body>
 	<script>
 		var db = new window.SQL.Database();
@@ -79,7 +82,13 @@
 				executeFilter();
 			});
 			
-			$('div#filter').css('display', 'block');
+			$('div#clearfilter').click(function(event) {
+				latlng1 = latlng2 = undefined;
+				circ.setRadius(0);
+				executeFilter();
+			});
+			
+			$('div#filter, div#clearfilter').css('display', 'block');
 			dropdown.change();
 		}
 		
