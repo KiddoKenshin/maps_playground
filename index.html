@@ -11,6 +11,12 @@
 	</head>
 	<body>
 		<div id="map"></div>
+		<div id="filter" style="display: none; position: absolute; left: 118px; top: 10px; width: 208px; height: 32px; background-color: #FFFFFF; border: 1px solid #DDDDDD; font-size: 62.5%; line-height: 32px; padding-left: 8px;">
+			Cuisine Filter
+			<select>
+				<option value="">All</option>
+			</select>
+		</div>
 	</body>
 	<script>
 		var db = new window.SQL.Database();
@@ -25,13 +31,56 @@
 		var pos1, pos2;
 		var selecting = false;
 		
-		function filterRadius() {
-			var sqlStatement = 'SELECT * FROM restaurants WHERE SQRT(POWER(geolat - ' + latlng1.lat() + ', 2) + POWER(geolng - ' + latlng1.lng() + ', 2)) <= ' + latlngDist;
-			if (filterCuisine != '') {
-				sqlStatement += " AND cuisine='" + filterCuisine + "'";
+		function executeFilter() {
+			// Hide all markers
+			for (var i = 0; i < markers.length; i++) {
+				markers[i].setVisible(false);
+			}
+			
+			var sqlStatement = 'SELECT * FROM restaurants';
+			if (filterCuisine !== '' || (latlng1 !== undefined && latlng2 !== undefined)) {
+				sqlStatement += ' WHERE ';
+				
+				if (filterCuisine !== '') {
+					sqlStatement += " cuisine='" + filterCuisine + "' ";
+				}
+				
+				if (latlng1 !== undefined && latlng2 !== undefined) {
+					if (filterCuisine !== '') sqlStatement += 'AND ';
+					sqlStatement += 'SQRT(POWER(geolat - ' + latlng1.lat() + ', 2) + POWER(geolng - ' + latlng1.lng() + ', 2)) <= ' + latlngDist;
+				}
 			}
 			var res = db.exec(sqlStatement + ';');
-			console.log(res);
+			
+			if (res.length > 0) {
+				var vals = res[0].values;
+				for (var i = 0; i < vals.length; i++) {
+					var arrayId = parseInt(vals[i][0] - 1);
+					markers[arrayId].setVisible(true);
+				}
+			} else {
+				console.log('No result');
+			}
+		}
+		
+		function createFilters() {
+			var dropdown = $('div#filter select');
+			var res = db.exec('SELECT DISTINCT(cuisine) as cuisine FROM restaurants');
+			
+			var vals = res[0].values;
+			for (var i = 0; i < vals.length; i++) {
+				var cuisine = vals[i][0];
+				var optionHtml = '<option value="' + cuisine + '">' + cuisine + '</option>';
+				dropdown.append(optionHtml);
+			}
+			
+			dropdown.change(function(event) {
+				filterCuisine = $(this).val();
+				executeFilter();
+			});
+			
+			$('div#filter').css('display', 'block');
+			dropdown.change();
 		}
 		
 		function closeActiveWindows() {
@@ -52,7 +101,8 @@
 			var marker = new google.maps.Marker({
 				position: geolocation,
 				map: mapVar,
-				title: data.name
+				title: data.name,
+				visible: false
 			});
 			marker.addListener('click', function() {
 				closeActiveWindows();
@@ -73,9 +123,11 @@
 				for (var j = 0; j < vals[i].length; j++) {
 					data[cols[j]] = vals[i][j];
 				}
-				console.log(data);
+				// console.log(data);
 				createMarkers(data);
 			}
+			
+			createFilters();
 		}
 		
 		function initDB() {
@@ -132,7 +184,7 @@
 				pos2 = mEvent.pixel;
 				showSelect();
 				
-				filterRadius();
+				executeFilter();
 			});
 			
 			circ.addListener('mouseup', function(mEvent) { // fail safe
@@ -141,12 +193,13 @@
 				pos2 = {x: mEvent.ua.x, y: mEvent.ua.y};
 				showSelect();
 				
-				filterRadius();
+				executeFilter();
 			});
 			
 			mapVar.addListener('mousedown', function(mEvent) {
 				selecting = true;
 				latlng1 = mEvent.latLng;
+				latlng2 = undefined;
 				pos1 = mEvent.pixel;
 				circ.setCenter(mEvent.latLng);
 				circ.setRadius(0);
