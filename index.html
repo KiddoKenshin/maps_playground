@@ -186,23 +186,28 @@
 				fillColor: '#FF0000'
 			});
 			
-			
-			mapVar.addListener('mouseup', function(mEvent) {
+			function doMouseUp(mEvent) {
 				selecting = false;
 				latlng2 = mEvent.latLng;
 				pos2 = mEvent.pixel;
 				showSelect();
 				
 				executeFilter();
+			}
+			
+			function doMouseMove(mEvent, circMode) {
+				latlng2 = mEvent.latLng;
+				pos2 = mEvent.pixel;
+				if (circMode) pos2 = {x: mEvent.ua.x, y: mEvent.ua.y};
+				if (selecting) showSelect();
+			}
+			
+			mapVar.addListener('mouseup', function(mEvent) {
+				doMouseUp(mEvent);
 			});
 			
 			circ.addListener('mouseup', function(mEvent) { // fail safe
-				selecting = false;
-				latlng2 = mEvent.latLng;
-				pos2 = {x: mEvent.ua.x, y: mEvent.ua.y};
-				showSelect();
-				
-				executeFilter();
+				doMouseUp(mEvent);
 			});
 			
 			mapVar.addListener('mousedown', function(mEvent) {
@@ -218,15 +223,11 @@
 			});
 			
 			mapVar.addListener('mousemove', function(mEvent) {
-				latlng2 = mEvent.latLng;
-				pos2 = mEvent.pixel;
-				if (selecting) showSelect();
+				doMouseMove(mEvent, false);
 			});
 			
 			circ.addListener('mousemove', function(mEvent) {
-				latlng2 = mEvent.latLng;
-				pos2 = {x: mEvent.ua.x, y: mEvent.ua.y};
-				if (selecting) showSelect();
+				doMouseMove(mEvent, true);
 			});
 			
 			initDB();
